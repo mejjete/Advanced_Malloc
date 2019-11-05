@@ -3,33 +3,41 @@
 void *base = NULL;
 unsigned unused_space = PAGE;
 
-void LOG()
+void LOG(bool gl)
 {
-    printf("LOG\n");
+    if(base == NULL)
+        return;
+    printf("\n********************\n");
     printf("Base address: [%p]\n", base);
-    printf("Unused Space: [%d]\n", unused_space);
+    printf("Unused Space: [%d] bytes\n", unused_space);
     printf("Struct block_meta_t: [%ld]\n", SIZE_STRUCT);
+    if(gl == false)
+    {
+        printf("\n********************\n");
+        return;
+    }
     block_meta_t *current = (block_meta_t *) base;
     while(current != NULL)
     {
         printf("Entity:\n");
-        printf("\tUsed size: [%ld]\n", current->size);
-        printf("\tAdress Pointer: [%p]\n", current);
+        printf("\tUsed size: [%ld] bytes\n", current->size);
+        printf("\tAdress User Pointer: [%p]\n", (u8 *)current + SIZE_STRUCT);
         if(current->flag == true)
-            puts("\tIs used\n");
+            puts("\tIs used");
         else 
-            puts("\tIsn't used\n");
+            puts("\tIsn't used");
         current = current->next;
     }
+    printf("********************\n");
 }
 
 static void *add_list(size_t size)
 {
     block_meta_t *current = (block_meta_t *) base;
-    if(current == NULL)
+    if(unused_space == PAGE)
     {
         mark_block((u8 *)current, size);
-        return ((u8 *)current + SIZE_STRUCT);
+        return (u8* )base + SIZE_STRUCT;
     }
     while(current->next != NULL)
         current = current->next;
@@ -46,7 +54,7 @@ static void mark_block(u8 *ptr, size_t size)
     bpt->next = NULL;
     bpt->size = size;
     bpt->flag = true;
-    unused_space -= (size + SIZE_STRUCT);
+    unused_space -= size + SIZE_STRUCT;
 }
 
 static void *morescore(size_t size)
@@ -75,14 +83,34 @@ void *a_malloc(size_t size)
     return add_list(size);
 }
 
+void free(void *ptr)
+{
+    if(unused_space == PAGE || ptr == NULL || base == NULL)
+        return;
+    block_meta_t *current = (block_meta_t *)base;
+    block_meta_t *prev = NULL;
+    while(((u8 *)current + SIZE_STRUCT) != ptr && current->next != NULL)
+    {
+        prev = current;
+        current = current->next;
+    }
+    printf("value ptr: [%p]\n", (u8 *)current + SIZE_STRUCT);
+    printf("block ptr: [%p]\n", (u8 *)current);
+    current->flag = false;
+    unused_space += current->size + SIZE_STRUCT;
+    if(prev->flag != true)
+    {
+        current->flag = false;
+        prev->next = current->next;
+        prev->size += current->size;
+        unused_space += current->size + SIZE_STRUCT;
+    }
+}
+
 int main()
 {
-    char *ptr = (char *)a_malloc(sizeof(char) * 15);
-    ptr = "Hello";
-    int *ptr_int = (int *) a_malloc(sizeof(int));
-    *ptr_int = 45;
-    printf("String: %s\nInteger: %d\n", ptr, *ptr_int);
-    LOG();
+    int *ptr = (int *) a_malloc(sizeof(int));
+    LOG(true);
     return 0;
 }
 
@@ -97,27 +125,5 @@ static void spin_unlock(volatile bool *lock)
     __sync_bool_compare_and_swap(lock, 1, 0);
 }
 
-/*
-
-
-int futex_wait(int *futex, int val)
-{
-    return syscall(SYS_futex, futex, FUTEX_WAIT, val, NULL, NULL, 0);
-}
-
-int futex_wake(int *futex)
-{
-    return syscall(SYS_futex, futex, FUTEX_WAKE, 1, NULL, NULL, 0);
-}
-
-void futex_lock(int *futex)
-{
-    while(__sync_val_compare_and_swap(futex, 0, 1) != 0)
-        futex_wait(futex, 1);
-}
-
-void futex_unlock(int *futex)
-{
-    __sync_bool_compare_and_swap(futex, 1, 0);
-    futex_wake(futex);
-}*/
+//14123008
+//14123032

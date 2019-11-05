@@ -12,8 +12,15 @@ typedef struct block_meta
 {
     struct block_meta *next;
     size_t size; 
-    bool flag;
+    volatile bool flag;
 }block_meta_t;
+
+struct b_m
+{
+    struct block_meta *next;
+    unsigned size; 
+    bool flag;
+};
 
 #define MMAP_ERROR ((void *) -1)
 #define PAGE 4096
@@ -22,9 +29,8 @@ typedef struct block_meta
 
 static void spin_lock(volatile bool *lock);
 static void spin_unlock(volatile bool *lock);
-static void LOG();
+static void LOG(bool gl);
 static void *add_list(size_t size);
-static void init_start();
 static void *morescore(size_t size);
 static void mark_block(u8 *ptr, size_t size);
 void *a_malloc(size_t size);
