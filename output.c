@@ -1,4 +1,4 @@
-#include "out.h"
+#include "output/out.h"
 
 double pow_(double num, double power)
 {
@@ -17,6 +17,7 @@ void wprint(const char *format_string, ...)
         char buffer[150];
         unsigned pos;
     }buff;
+    memset(&buff, 0, (150 + sizeof(unsigned)));
     buff.pos = 0;
     char sidebuf[50];
     int st_len = strlen(format_string);
@@ -41,6 +42,8 @@ void wprint(const char *format_string, ...)
             }*/
             else if(ch == '\n')
                 buff.buffer[buff.pos++] = '\n';
+            else if(ch == '\t')
+                buff.buffer[buff.pos++] = '\t';
         }
         else 
             buff.buffer[buff.pos++] = format_string[i];
@@ -95,18 +98,7 @@ char* itoa(int num, char* str, int base)
     reverse(str, i); 
     return str; 
 } 
-
-void *base;
-void *next;
-
-int main() 
-{ 
-    base = sbrk(0);
-    wprint("Hello world %d\n", 45);
-    next = sbrk(0); 
-    return 0; 
-} 
-
+/*
 void decToHexa(char *string, char *base) 
 {    
     int n = atoi(string);
@@ -130,5 +122,5 @@ void decToHexa(char *string, char *base)
     } 
     strcpy(base, hexaDeciNum);
 }
-
+*/
 
