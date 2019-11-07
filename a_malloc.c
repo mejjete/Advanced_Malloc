@@ -1,4 +1,3 @@
-//Add a new feature that can split a block that have a biggest area then it's needed
 //Fixed free 
 #include "a_malloc.h"
 #include "output/out.h"
@@ -28,7 +27,7 @@ void LOG(bool gl)
         if(current->flag == true)
             puts("\tIs used");
         else 
-            puts("\tIsn't used");
+            puts("\tFREE");
         current = current->next;
     }
     wprint("********************\n");
@@ -36,20 +35,18 @@ void LOG(bool gl)
 
 static block_meta_t *split_block(block_meta_t *ptr, size_t size)
 {
-    wprint("Splitting block\n");
     if(ptr == NULL)
         return NULL;
-    if(size + SIZE_STRUCT > unused_space)
-        return NULL;
     block_meta_t *next_block = (block_meta_t *)((u8 *)ptr + SIZE_STRUCT + size);
+    size_t cur_size = ptr->size;
     next_block->flag = false;
     next_block->next = ptr->next;
     next_block->prev = ptr;
-    next_block->size = ptr->size - size;
+    next_block->size = cur_size - (SIZE_STRUCT + size);
 
     ptr->flag = true;
     ptr->size = size;
-    unused_space -= size + SIZE_STRUCT + SIZE_STRUCT;
+    unused_space -= ptr->size + SIZE_STRUCT;
     return next_block;
 }
 
@@ -57,11 +54,6 @@ static void *add_list(size_t size)
 {
     block_meta_t *current = (block_meta_t *) base;
     block_meta_t *prev = current;
-    if(unused_space == PAGE)
-    {
-        mark_block((u8 *)current, size, NULL, NULL);
-        return ((u8* )current + SIZE_STRUCT);
-    }
     while(current->next != NULL)
     {
         if(current->flag == false && current->size >= size) 
@@ -72,11 +64,11 @@ static void *add_list(size_t size)
         prev = current;
         current = current->next;
     }
-    if(current->flag == false && current->size >= size)
+    if(current->flag == false && current->size + SIZE_STRUCT >= size)
     {
         block_meta_t *next = split_block(current, size);
         current->next = next ;
-        return (u8 *)current + SIZE_STRUCT;
+        return ((u8 *)current + SIZE_STRUCT);
     }
     u8 *next_block = ((u8 *)current) + SIZE_STRUCT + current->size;
     mark_block(next_block, size, NULL, prev);
@@ -107,7 +99,7 @@ static void *morescore(size_t size)
 
 void *a_malloc(size_t size)
 {
-    if(size >= unused_space)
+    if(size >= unused_space) 
         return NULL;
     if(base == NULL)
     {
@@ -117,26 +109,44 @@ void *a_malloc(size_t size)
             printf("Morescore Error!\n");
             exit(EXIT_FAILURE);
         }
+        block_meta_t *bpt = (block_meta_t *) base;
+        bpt->next = NULL;
+        bpt->prev = NULL;
+        bpt->size = PAGE - SIZE_STRUCT;
+        unused_space -= SIZE_STRUCT;
+        bpt->flag = false;
     }
     return add_list(size);
 }
 
 void free(void *ptr)
 {
-    if(ptr == NULL || unused_space == PAGE)
+    block_meta_t *current = (block_meta_t *) ((u8 *)ptr - SIZE_STRUCT);
+    if(ptr == NULL || unused_space == PAGE || current->flag == false)
         return;
 
-    block_meta_t *current = (block_meta_t *) ((u8 *)ptr - SIZE_STRUCT);
+    block_meta_t *next = current->next;
     block_meta_t *prev = current->prev;
-    if(current->flag == false)
-        return;
+
     if(prev != NULL)
     {
         if(prev->flag == false)
         {
             prev->next = current->next;
-            prev->size += current->size + SIZE_STRUCT;
             unused_space += current->size + SIZE_STRUCT;
+            prev->size += current->size + SIZE_STRUCT;
+            current->flag = false;
+            return; 
+        }
+    }
+    if(next != NULL)
+    {
+        if(next->flag == false)
+        {
+            current->next = next->next;
+            unused_space += current->size + SIZE_STRUCT;
+            current->size += next->size + SIZE_STRUCT;
+            current->flag = false;
             return; 
         }
     }
@@ -146,25 +156,13 @@ void free(void *ptr)
 
 int main()
 {
-    base = sbrk(PAGE);
-    block_meta_t *bpt = (block_meta_t *) base;
-    bpt->next = NULL;
-    bpt->prev = NULL;
-    bpt->size = PAGE - SIZE_STRUCT;
-    bpt->flag = false;
-    block_meta_t *next = split_block(bpt, 1024);
-    bpt->next = next;
-
-    /*int *ptr = (int *) a_malloc(sizeof(int));
+    int *ptr = (int *) a_malloc(sizeof(int));
     wprint("FIRST POINTER: [%d]\n", ptr);
     int *arr = (int *) a_malloc(sizeof(int) * 10);
     char *string = (char *) a_malloc(sizeof(char) * 50);
     free(ptr);
-    free(arr);
     free(string);
-    void *v = a_malloc(sizeof(int));
-    free(v);
-    v = a_malloc(sizeof(int));*/
+    free(arr);
     LOG(true);
     return 0;
 }
