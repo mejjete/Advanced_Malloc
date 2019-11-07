@@ -36,10 +36,12 @@ void LOG(bool gl)
 
 static block_meta_t *split_block(block_meta_t *ptr, size_t size)
 {
+    wprint("Splitting block\n");
     if(ptr == NULL)
         return NULL;
-
-    block_meta_t *next_block = (block_meta_t *)(u8 *)ptr + SIZE_STRUCT + size;
+    if(size + SIZE_STRUCT > unused_space)
+        return NULL;
+    block_meta_t *next_block = (block_meta_t *)((u8 *)ptr + SIZE_STRUCT + size);
     next_block->flag = false;
     next_block->next = ptr->next;
     next_block->prev = ptr;
@@ -47,7 +49,7 @@ static block_meta_t *split_block(block_meta_t *ptr, size_t size)
 
     ptr->flag = true;
     ptr->size = size;
-    unused_space -= size + SIZE_STRUCT;
+    unused_space -= size + SIZE_STRUCT + SIZE_STRUCT;
     return next_block;
 }
 
@@ -126,8 +128,6 @@ void free(void *ptr)
 
     block_meta_t *current = (block_meta_t *) ((u8 *)ptr - SIZE_STRUCT);
     block_meta_t *prev = current->prev;
-    wprint("FREE FUNCTION\n");
-    wprint("POINTER: %d\n", ptr);
     if(current->flag == false)
         return;
     if(prev != NULL)
@@ -146,7 +146,17 @@ void free(void *ptr)
 
 int main()
 {
-    int *ptr = (int *) a_malloc(sizeof(int));
+    base = sbrk(PAGE);
+    block_meta_t *bpt = (block_meta_t *) base;
+    bpt->next = NULL;
+    bpt->prev = NULL;
+    bpt->size = PAGE - SIZE_STRUCT;
+    bpt->flag = false;
+    block_meta_t *next = split_block(bpt, 1024);
+    bpt->next = next;
+
+    /*int *ptr = (int *) a_malloc(sizeof(int));
+    wprint("FIRST POINTER: [%d]\n", ptr);
     int *arr = (int *) a_malloc(sizeof(int) * 10);
     char *string = (char *) a_malloc(sizeof(char) * 50);
     free(ptr);
@@ -154,7 +164,7 @@ int main()
     free(string);
     void *v = a_malloc(sizeof(int));
     free(v);
-    v = a_malloc(sizeof(int));
+    v = a_malloc(sizeof(int));*/
     LOG(true);
     return 0;
 }
