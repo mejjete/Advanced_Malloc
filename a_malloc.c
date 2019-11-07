@@ -1,3 +1,5 @@
+//Add a new feature that can split a block that have a biggest area then it's needed
+//Fixed free 
 #include "a_malloc.h"
 #include "output/out.h"
 
@@ -32,6 +34,23 @@ void LOG(bool gl)
     wprint("********************\n");
 }
 
+static block_meta_t *split_block(block_meta_t *ptr, size_t size)
+{
+    if(ptr == NULL)
+        return NULL;
+
+    block_meta_t *next_block = (block_meta_t *)(u8 *)ptr + SIZE_STRUCT + size;
+    next_block->flag = false;
+    next_block->next = ptr->next;
+    next_block->prev = ptr;
+    next_block->size = ptr->size - size;
+
+    ptr->flag = true;
+    ptr->size = size;
+    unused_space -= size + SIZE_STRUCT;
+    return next_block;
+}
+
 static void *add_list(size_t size)
 {
     block_meta_t *current = (block_meta_t *) base;
@@ -51,10 +70,16 @@ static void *add_list(size_t size)
         prev = current;
         current = current->next;
     }
+    if(current->flag == false && current->size >= size)
+    {
+        block_meta_t *next = split_block(current, size);
+        current->next = next ;
+        return (u8 *)current + SIZE_STRUCT;
+    }
     u8 *next_block = ((u8 *)current) + SIZE_STRUCT + current->size;
     mark_block(next_block, size, NULL, prev);
     current->next = (block_meta_t *) next_block;
-    u8 *pointer = ((u8 *)next_block + SIZE_STRUCT);
+    u8 *pointer = (u8 *)next_block + SIZE_STRUCT;
     return (void *)pointer;
 }
 
@@ -110,8 +135,9 @@ void free(void *ptr)
         if(prev->flag == false)
         {
             prev->next = current->next;
-            prev->size += current->size;
-            unused_space += current->size + SIZE_STRUCT; 
+            prev->size += current->size + SIZE_STRUCT;
+            unused_space += current->size + SIZE_STRUCT;
+            return; 
         }
     }
     current->flag = false;
@@ -122,7 +148,13 @@ int main()
 {
     int *ptr = (int *) a_malloc(sizeof(int));
     int *arr = (int *) a_malloc(sizeof(int) * 10);
+    char *string = (char *) a_malloc(sizeof(char) * 50);
+    free(ptr);
     free(arr);
+    free(string);
+    void *v = a_malloc(sizeof(int));
+    free(v);
+    v = a_malloc(sizeof(int));
     LOG(true);
     return 0;
 }

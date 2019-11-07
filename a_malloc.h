@@ -24,6 +24,7 @@ typedef struct block_meta
 static void spin_lock(volatile bool *lock);
 static void spin_unlock(volatile bool *lock);
 static void LOG(bool gl);
+static block_meta_t *split_block(block_meta_t *ptr, size_t size);
 static void *add_list(size_t size);
 static void *morescore(size_t size);
 static void mark_block(u8 *ptr, size_t size, block_meta_t *next, block_meta_t *prev);
