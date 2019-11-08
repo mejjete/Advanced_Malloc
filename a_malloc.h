@@ -21,6 +21,7 @@ typedef struct block_meta
 #define SIZE_STRUCT (sizeof(block_meta_t))
 #define u8 uint8_t 
 
+static void unite_block(block_meta_t *dest, block_meta_t *src);
 static void spin_lock(volatile bool *lock);
 static void spin_unlock(volatile bool *lock);
 static void LOG(bool gl);

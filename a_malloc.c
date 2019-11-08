@@ -39,14 +39,15 @@ static block_meta_t *split_block(block_meta_t *ptr, size_t size)
         return NULL;
     block_meta_t *next_block = (block_meta_t *)((u8 *)ptr + SIZE_STRUCT + size);
     size_t cur_size = ptr->size;
+    unused_space -= size + SIZE_STRUCT;
     next_block->flag = false;
     next_block->next = ptr->next;
     next_block->prev = ptr;
-    next_block->size = cur_size - (SIZE_STRUCT + size);
+    next_block->size = cur_size - (size + SIZE_STRUCT);
+    next_block->size -= SIZE_STRUCT;
 
     ptr->flag = true;
     ptr->size = size;
-    unused_space -= ptr->size + SIZE_STRUCT;
     return next_block;
 }
 
@@ -67,7 +68,7 @@ static void *add_list(size_t size)
     if(current->flag == false && current->size + SIZE_STRUCT >= size)
     {
         block_meta_t *next = split_block(current, size);
-        current->next = next ;
+        current->next = next;
         return ((u8 *)current + SIZE_STRUCT);
     }
     u8 *next_block = ((u8 *)current) + SIZE_STRUCT + current->size;
@@ -75,6 +76,14 @@ static void *add_list(size_t size)
     current->next = (block_meta_t *) next_block;
     u8 *pointer = (u8 *)next_block + SIZE_STRUCT;
     return (void *)pointer;
+}
+
+static void unite_block(block_meta_t *dest, block_meta_t *src)
+{
+    if(dest == NULL || src == NULL)
+        return;
+    dest->next = src->next;
+    dest->size = src->size + SIZE_STRUCT;
 }
 
 static void mark_block(u8 *ptr, size_t size, block_meta_t *next, block_meta_t *prev)
@@ -119,7 +128,11 @@ void *a_malloc(size_t size)
     return add_list(size);
 }
 
-void free(void *ptr)
+//#define FREE_1
+#define FREE_2
+
+#ifdef FREE_1
+void a_free(void *ptr)
 {
     block_meta_t *current = (block_meta_t *) ((u8 *)ptr - SIZE_STRUCT);
     if(ptr == NULL || unused_space == PAGE || current->flag == false)
@@ -153,16 +166,24 @@ void free(void *ptr)
     current->flag = false;
     unused_space += current->size + SIZE_STRUCT;
 }
+#endif
+
+#ifdef FREE_2
+
+void a_free(void *ptr)
+{
+    block_meta_t *current = (block_meta_t *) ((u8 *)ptr - SIZE_STRUCT);
+    current->flag = false;
+    unused_space += current->size + SIZE_STRUCT;
+
+}
+#endif
 
 int main()
 {
-    int *ptr = (int *) a_malloc(sizeof(int));
-    wprint("FIRST POINTER: [%d]\n", ptr);
-    int *arr = (int *) a_malloc(sizeof(int) * 10);
-    char *string = (char *) a_malloc(sizeof(char) * 50);
-    free(ptr);
-    free(string);
-    free(arr);
+    int *p1 = (int *) a_malloc(sizeof(int));
+    //int *p2 = (int *) a_malloc(sizeof(int) * 5);
+    a_free(p1);
     LOG(true);
     return 0;
 }
