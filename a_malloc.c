@@ -1,4 +1,5 @@
 //Fixed free 
+//Fixed DUMMY CYCLE in function add_list(refactor)
 #include "a_malloc.h"
 #include "output/out.h"
 
@@ -12,7 +13,7 @@ void LOG(bool gl)
     wprint("\n********************\n");
     wprint("Base address: [%d]\n", base);
     wprint("Unused Space: [%d] bytes\n", unused_space);
-    wprint("Struct block_meta_t: [%d]\n", SIZE_STRUCT);
+    wprint("Struct block_meta_t: [%d]\n\n", SIZE_STRUCT);
     if(gl == false)
     {
         wprint("\n********************\n");
@@ -35,11 +36,20 @@ void LOG(bool gl)
 
 static block_meta_t *split_block(block_meta_t *ptr, size_t size)
 {
+    wprint("Split block\n");
+    wprint("Started splitting: \n");
+    wprint("Start block: [%d] need to split to [%d]\n", ptr->size, size);
     if(ptr == NULL)
         return NULL;
+    if(ptr->size < (size + SIZE_STRUCT))
+    {
+        ptr->flag = true;
+        unused_space -= size;
+        return ptr->next;
+    }
     block_meta_t *next_block = (block_meta_t *)((u8 *)ptr + SIZE_STRUCT + size);
     size_t cur_size = ptr->size;
-    unused_space -= size + SIZE_STRUCT;
+    unused_space -= (size + SIZE_STRUCT);
     next_block->flag = false;
     next_block->next = ptr->next;
     next_block->prev = ptr;
@@ -48,6 +58,8 @@ static block_meta_t *split_block(block_meta_t *ptr, size_t size)
 
     ptr->flag = true;
     ptr->size = size;
+    wprint("Endind splitting: \n");
+    wprint("Base block: [%d]\nDerived block: [%d]\n", ptr->size, next_block->size);
     return next_block;
 }
 
@@ -59,7 +71,10 @@ static void *add_list(size_t size)
     {
         if(current->flag == false && current->size >= size) 
         {
-            mark_block((u8 *)current, size, current->next, prev);
+            wprint("DUMMY CYCLE\n");
+            block_meta_t *s = split_block(current, size);
+            current->next = s;
+            //mark_block((u8 *)current, size, current->next, prev);
             return ((u8 *)current + SIZE_STRUCT);
         }
         prev = current;
@@ -76,14 +91,6 @@ static void *add_list(size_t size)
     current->next = (block_meta_t *) next_block;
     u8 *pointer = (u8 *)next_block + SIZE_STRUCT;
     return (void *)pointer;
-}
-
-static void unite_block(block_meta_t *dest, block_meta_t *src)
-{
-    if(dest == NULL || src == NULL)
-        return;
-    dest->next = src->next;
-    dest->size = src->size + SIZE_STRUCT;
 }
 
 static void mark_block(u8 *ptr, size_t size, block_meta_t *next, block_meta_t *prev)
@@ -168,22 +175,42 @@ void a_free(void *ptr)
 }
 #endif
 
+static void unite_block(block_meta_t *dest, block_meta_t *src)
+{
+    if(dest == NULL || src == NULL)
+        return;
+    dest->next = src->next;
+    dest->size = src->size + SIZE_STRUCT;
+}
+
 #ifdef FREE_2
 
 void a_free(void *ptr)
 {
-    block_meta_t *current = (block_meta_t *) ((u8 *)ptr - SIZE_STRUCT);
-    current->flag = false;
-    unused_space += current->size + SIZE_STRUCT;
-
+    wprint("FREE 2\n");
+    block_meta_t *current = (block_meta_t *)((u8 *)ptr - SIZE_STRUCT);
+    //current->flag = false;
+    //unused_space += current->size;
+    if(current->prev != NULL)
+    {
+        if(current->prev->flag == false)
+        {
+            unused_space += (current->size + SIZE_STRUCT);
+            unite_block(current->prev, current);
+        } 
+    }
+    else 
+    {
+        current->flag = false;
+        unused_space += current->size;
+    }
 }
 #endif
 
 int main()
 {
-    int *p1 = (int *) a_malloc(sizeof(int));
-    //int *p2 = (int *) a_malloc(sizeof(int) * 5);
-    a_free(p1);
+    int *p1 = (int *) a_malloc(sizeof(int) * 2);
+    
     LOG(true);
     return 0;
 }
