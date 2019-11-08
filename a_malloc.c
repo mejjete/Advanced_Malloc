@@ -37,8 +37,6 @@ void LOG(bool gl)
 static block_meta_t *split_block(block_meta_t *ptr, size_t size)
 {
     wprint("Split block\n");
-    wprint("Started splitting: \n");
-    wprint("Start block: [%d] need to split to [%d]\n", ptr->size, size);
     if(ptr == NULL)
         return NULL;
     if(ptr->size < (size + SIZE_STRUCT))
@@ -47,19 +45,22 @@ static block_meta_t *split_block(block_meta_t *ptr, size_t size)
         unused_space -= size;
         return ptr->next;
     }
+    wprint("Before Splitting:\n");
+    wprint("Base: [%d]\n", ptr->size);
     block_meta_t *next_block = (block_meta_t *)((u8 *)ptr + SIZE_STRUCT + size);
     size_t cur_size = ptr->size;
     unused_space -= (size + SIZE_STRUCT);
     next_block->flag = false;
     next_block->next = ptr->next;
     next_block->prev = ptr;
+    next_block->size = unused_space - SIZE_STRUCT;
     next_block->size = cur_size - (size + SIZE_STRUCT);
-    next_block->size -= SIZE_STRUCT;
+    //next_block->size -= SIZE_STRUCT;
 
     ptr->flag = true;
     ptr->size = size;
-    wprint("Endind splitting: \n");
-    wprint("Base block: [%d]\nDerived block: [%d]\n", ptr->size, next_block->size);
+    wprint("Before Splitting\n");
+    wprint("Base: [%d]\nDerived: [%d]\n", ptr->size, next_block->size);
     return next_block;
 }
 
@@ -177,40 +178,75 @@ void a_free(void *ptr)
 
 static void unite_block(block_meta_t *dest, block_meta_t *src)
 {
+    wprint("Unite block\n");
+    wprint("Dest block: [%d]\nSource blokc: [%d]\n", dest->size, src->size);
     if(dest == NULL || src == NULL)
         return;
     dest->next = src->next;
-    dest->size = src->size + SIZE_STRUCT;
+    dest->size += src->size + SIZE_STRUCT;
+    wprint("After Unite_Func\n");
+    wprint("Dest block: [%d]\nSource blokc: [%d]\n", dest->size, src->size);
 }
 
 #ifdef FREE_2
 
 void a_free(void *ptr)
 {
-    wprint("FREE 2\n");
+    wprint("FREE 2  [%d]\n", ptr);
     block_meta_t *current = (block_meta_t *)((u8 *)ptr - SIZE_STRUCT);
+    block_meta_t *prev = current->prev;
+    block_meta_t *next = current->next;
     //current->flag = false;
     //unused_space += current->size;
-    if(current->prev != NULL)
+    /*if(next != NULL)
     {
-        if(current->prev->flag == false)
+        while(next != NULL)
         {
-            unused_space += (current->size + SIZE_STRUCT);
-            unite_block(current->prev, current);
-        } 
+            if(next->flag == false)
+            {
+                unused_space += (current->size + SIZE_STRUCT);
+                unite_block(current, next);
+            }
+            else 
+                break;
+            next = next->next;
+        }
     }
     else 
     {
         current->flag = false;
         unused_space += current->size;
+    }*/
+
+    if(prev != NULL)
+    {
+        while(prev != NULL)
+        {
+            if(prev->flag == false)
+            {
+                unused_space += (current->size + SIZE_STRUCT);
+                unite_block(prev, current);
+            }
+            else 
+                break;
+            prev = prev->prev; 
+            current = prev;
+        }
     }
+    else
+    {
+        current->flag = false;
+        unused_space += current->size;
+    } 
 }
 #endif
 
 int main()
 {
     int *p1 = (int *) a_malloc(sizeof(int) * 2);
-    
+    int *p2 = (int *) a_malloc(sizeof(int) * 5);
+    a_free(p1);
+    a_free(p2);
     LOG(true);
     return 0;
 }
