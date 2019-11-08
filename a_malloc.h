@@ -17,7 +17,8 @@ typedef struct block_meta
 }block_meta_t;
 
 #define MMAP_ERROR ((void *) -1)
-#define PAGE 4096
+#define UNIX_PAGE 4096
+#define PAGE (UNIX_PAGE * 4)
 #define SIZE_STRUCT (sizeof(block_meta_t))
 #define u8 uint8_t 
 
@@ -29,6 +30,9 @@ static block_meta_t *split_block(block_meta_t *ptr, size_t size);
 static void *add_list(size_t size);
 static void *morescore(size_t size);
 static void mark_block(u8 *ptr, size_t size, block_meta_t *next, block_meta_t *prev);
+
+void *a_calloc(size_t nitems, size_t size);
+void *a_realloc(void *ptr, size_t size);
 void *a_malloc(size_t size);
 void a_free(void *ptr);
 
