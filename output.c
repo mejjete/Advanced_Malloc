@@ -1,4 +1,4 @@
-#include "output/out.h"
+#include "header/out.h"
 
 double pow_(double num, double power)
 {
@@ -36,10 +36,18 @@ void wprint(const char *format_string, ...)
                     buff.buffer[buff.pos++] = out_string[i];
                 i++;
             }
-            /*else if(ch == 'p' || ch == 'P')
+            else if(ch == 's' || ch == 'S')
             {
-                
-            }*/
+                char *string = va_arg(list, char *);
+                for(int i = 0; i < strlen(string); i++)
+                    buff.buffer[buff.pos++] = string[i];  
+                i++;
+            }
+            else if(ch == 'c' || ch == 'C')
+            {
+                buff.buffer[buff.pos++] = va_arg(list, int);
+                i++;
+            }
             else if(ch == '\n')
                 buff.buffer[buff.pos++] = '\n';
             else if(ch == '\t')
