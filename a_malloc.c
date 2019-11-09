@@ -1,8 +1,7 @@
-//Fixed free 
-//Fixed multi-allocation trouble
-//Fixed split_block func
-#include "a_malloc.h"
-#include "output/out.h"
+//need to advance a free mehanism 
+#include "header/a_malloc.h"
+#include "header/out.h"
+#include <stdarg.h>
 
 void *base = NULL;
 unsigned unused_space = PAGE;
@@ -33,18 +32,6 @@ void LOG(bool gl)
         current = current->next;
     }
     wprint("********************\n");
-}
-
-void mallinfo(void *ptr)
-{
-    if(ptr == NULL)
-        return;
-    block_meta_t *cl = (block_meta_t *)(ptr - SIZE_STRUCT);
-    wprint("Size: [%d]\n", cl->size);
-    if(cl->flag == true)
-        wprint("Is used\n");
-    else 
-        wprint("Free\n");
 }
 
 static block_meta_t *split_block(block_meta_t *ptr, size_t size)
@@ -150,6 +137,17 @@ void *a_realloc(void *ptr, size_t size)
     return add_list(size);
 }
 
+void *a_calloc(size_t nitems, size_t size)
+{
+    void *ptr = a_malloc(size);
+    if(ptr != NULL)
+    {
+        memset(ptr, 0, nitems);
+        return ptr;
+    }   
+    return NULL;
+}
+
 static void unite_block(block_meta_t *dest, block_meta_t *src)
 {
     if(dest == NULL || src == NULL)
@@ -212,12 +210,29 @@ void a_free(void *ptr)
     #endif
 }
 
+struct a_mallinfo_t a_mallinfo()
+{
+    struct a_mallinfo_t info;
+    if(base == NULL)
+    {
+        info.arena = info.nofch = info.mxar = info.mreg = 0;
+        return info;
+    }
+    info.arena = unused_space;
+    info.mreg = PAGE - unused_space;
+    info.mxar = PAGE;
+    info.nofch = 0;
+    block_meta_t *ptr = (block_meta_t *)base;
+    while(ptr != NULL)
+    {
+        info.nofch++;
+        ptr = ptr->next;
+    }
+    return info;
+}   
+
 int main()
 {
-    int *ptr = (int *) a_malloc(sizeof(int) * 8);
-    ptr = (int *)a_realloc(ptr, sizeof(int) * 10);
-    a_free(ptr);
-    LOG(true);
     return 0;
 }
 
