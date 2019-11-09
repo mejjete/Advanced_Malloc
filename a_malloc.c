@@ -1,5 +1,6 @@
 //Fixed free 
 //Fixed multi-allocation trouble
+//Fixed split_block func
 #include "a_malloc.h"
 #include "output/out.h"
 
@@ -63,7 +64,7 @@ static block_meta_t *split_block(block_meta_t *ptr, size_t size)
     next_block->next = ptr->next;
     next_block->prev = ptr;
     next_block->size = unused_space - SIZE_STRUCT;
-    next_block->size = cur_size - (size + SIZE_STRUCT + SIZE_STRUCT);
+    next_block->size = cur_size - (size + SIZE_STRUCT);
 
     ptr->flag = true;
     ptr->size = size;
@@ -78,7 +79,6 @@ static void *add_list(size_t size)
     {
         if(current->flag == false && current->size >= size) 
         {
-            wprint("DUMMY CYCLE\n");
             block_meta_t *s = split_block(current, size);
             current->next = s;
             return ((u8 *)current + SIZE_STRUCT);
@@ -141,6 +141,15 @@ void *a_malloc(size_t size)
     return add_list(size);
 }
 
+void *a_realloc(void *ptr, size_t size)
+{
+    block_meta_t *current = (block_meta_t *)((u8 *)ptr - SIZE_STRUCT);
+    if(current == NULL && current->size >= size)
+        return ptr;
+    a_free(ptr);
+    return add_list(size);
+}
+
 static void unite_block(block_meta_t *dest, block_meta_t *src)
 {
     if(dest == NULL || src == NULL)
@@ -148,6 +157,8 @@ static void unite_block(block_meta_t *dest, block_meta_t *src)
     dest->next = src->next;
     dest->size += src->size + SIZE_STRUCT;
 }
+
+//#define DEBUG
 
 void a_free(void *ptr)
 {
@@ -175,7 +186,9 @@ void a_free(void *ptr)
         current->flag = false;
         unused_space += current->size;
     } 
-    /*next = current->next;
+
+    #ifdef DEBUG
+    next = prev->next;
     if(next != NULL)
     {
         while(next != NULL)
@@ -195,12 +208,15 @@ void a_free(void *ptr)
     {
         current->flag = false;
         unused_space += current->size;
-    }*/
+    }
+    #endif
 }
 
 int main()
 {
     int *ptr = (int *) a_malloc(sizeof(int) * 8);
+    ptr = (int *)a_realloc(ptr, sizeof(int) * 10);
+    a_free(ptr);
     LOG(true);
     return 0;
 }

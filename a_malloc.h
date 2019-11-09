@@ -18,7 +18,8 @@ typedef struct block_meta
 
 #define MMAP_ERROR ((void *) -1)
 #define UNIX_PAGE 4096
-#define PAGE (UNIX_PAGE * 4)
+//#define PAGE (UNIX_PAGE * 4)
+#define PAGE 4096
 #define SIZE_STRUCT (sizeof(block_meta_t))
 #define u8 uint8_t 
 
