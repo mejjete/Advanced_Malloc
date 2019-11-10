@@ -1,7 +1,6 @@
 //need to advance a free mehanism 
 #include "header/a_malloc.h"
-#include "header/out.h"
-#include <stdarg.h>
+#include "header/out.h"                                
 
 void *base = NULL;
 unsigned unused_space = PAGE;
@@ -33,6 +32,28 @@ void LOG(bool gl)
     }
     wprint("********************\n");
 }
+
+struct a_mallinfo_t a_mallinfo()
+{
+    struct a_mallinfo_t info;
+    if(base == NULL)
+    {
+        info.arena = info.nofch = info.mxar = info.mreg = 0;
+        return info;
+    }
+    info.arena = unused_space;
+    info.mreg = PAGE - unused_space;
+    info.mxar = PAGE;
+    info.nofch = 0;
+    block_meta_t *ptr = (block_meta_t *)base;
+    while(ptr != NULL)
+    {
+        info.nofch++;
+        ptr = ptr->next;
+    }
+    return info;
+}   
+
 
 static block_meta_t *split_block(block_meta_t *ptr, size_t size)
 {
@@ -133,7 +154,7 @@ void *a_realloc(void *ptr, size_t size)
     block_meta_t *current = (block_meta_t *)((u8 *)ptr - SIZE_STRUCT);
     if(current == NULL && current->size >= size)
         return ptr;
-    a_free(ptr);
+    wfree(ptr);
     return add_list(size);
 }
 
@@ -152,97 +173,56 @@ static void unite_block(block_meta_t *dest, block_meta_t *src)
 {
     if(dest == NULL || src == NULL)
         return;
+    if(src->next != NULL)
+        src->next->prev = dest;
     dest->next = src->next;
     dest->size += src->size + SIZE_STRUCT;
 }
 
-//#define DEBUG
-
-void a_free(void *ptr)
+void wfree(void *ptr)
 {
-    wprint("FREE 2  [%d]\n", ptr);
-    block_meta_t *current = (block_meta_t *)((u8 *)ptr - SIZE_STRUCT);
-    block_meta_t *prev = current->prev;
-    block_meta_t *next = current->next;
-    if(prev != NULL)
+    block_meta_t *block = (block_meta_t *)(ptr - SIZE_STRUCT);
+    if(block == NULL || block->flag == false)
+        return;
+    unused_space += block->size;
+    block->flag = false;
+    block_meta_t *next;
+    block_meta_t *prev = block->prev;
+    while(prev != NULL && prev->flag == false)
     {
-        while(prev != NULL)
-        {
-            if(prev->flag == false)
-            {
-                unused_space += (current->size + SIZE_STRUCT);
-                unite_block(prev, current);
-            }
-            else 
-                break;
-            prev = prev->prev; 
-            current = prev;
-        }
+        unite_block(prev, block);
+        wprint("\n");
+        unused_space += SIZE_STRUCT;
+        block = prev;
+        prev = prev->prev;
     }
-    else
+    next = block->next;
+    while(next != NULL && next->flag == false)
     {
-        current->flag = false;
-        unused_space += current->size;
-    } 
-
-    #ifdef DEBUG
-    next = prev->next;
-    if(next != NULL)
-    {
-        while(next != NULL)
-        {
-            if(next->flag == false)
-            {
-                unused_space += (current->size + SIZE_STRUCT);
-                unite_block(current, next);
-            }
-            else 
-                break;
-            next = next->next;
-            current = next;
-        }
+        unite_block(block, next);
+        wprint("\n");
+        unused_space += SIZE_STRUCT;
+        block = next;
+        next = next->next;
     }
-    else 
-    {
-        current->flag = false;
-        unused_space += current->size;
-    }
-    #endif
-}
-
-struct a_mallinfo_t a_mallinfo()
-{
-    struct a_mallinfo_t info;
-    if(base == NULL)
-    {
-        info.arena = info.nofch = info.mxar = info.mreg = 0;
-        return info;
-    }
-    info.arena = unused_space;
-    info.mreg = PAGE - unused_space;
-    info.mxar = PAGE;
-    info.nofch = 0;
-    block_meta_t *ptr = (block_meta_t *)base;
-    while(ptr != NULL)
-    {
-        info.nofch++;
-        ptr = ptr->next;
-    }
-    return info;
-}   
+} 
 
 int main()
 {
+    char *ptr = (char *)a_malloc(10);
+    int *i_ptr = (int *)a_malloc(sizeof(int) * 4);
+    int *i2_ptr = (int *)a_malloc(sizeof(int) * 10);
+    wfree(i_ptr);
+    wfree(ptr);
+    wfree(i2_ptr);
+    LOG(true);
     return 0;
 }
 
-static void spin_lock(volatile bool *lock)
-{
-    while(!__sync_bool_compare_and_swap(lock, 0, 1))
-        ;
-}
 
-static void spin_unlock(volatile bool *lock)
-{
-    __sync_bool_compare_and_swap(lock, 1, 0);
-}
+    /*char *ptr = (char *)a_malloc(10);
+    int *i_ptr = (int *)a_malloc(sizeof(int) * 4);
+    int *i2_ptr = (int *)a_malloc(sizeof(int) * 10);
+    wfree(i_ptr);
+    wfree(ptr);
+    wfree(i2_ptr);*/

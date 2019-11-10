@@ -24,11 +24,10 @@ struct a_mallinfo_t
     int mxar;       /* maximum total alocated size */
 };
 
-int size;
-
 #define MMAP_ERROR ((void *) -1)
 #define UNIX_PAGE 4096
-#define PAGE (UNIX_PAGE * 4)
+#define PAGE 4096
+//#define PAGE (UNIX_PAGE * 4)
 #define SIZE_STRUCT (sizeof(block_meta_t))
 #define u8 uint8_t 
 
@@ -45,6 +44,6 @@ struct a_mallinfo_t a_mallinfo();
 void *a_calloc(size_t nitems, size_t size);
 void *a_realloc(void *ptr, size_t size);
 void *a_malloc(size_t size);
-void a_free(void *ptr);
+void wfree(void *ptr);
 
 #endif
