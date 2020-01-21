@@ -4,7 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#ifdef WIN32
+    #include <Windows.h>
+#endif
+#ifdef __linux__
+    #include <unistd.h>
+#endif
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -25,9 +30,7 @@ struct a_mallinfo_t
 };
 
 #define MMAP_ERROR ((void *) -1)
-#define UNIX_PAGE 4096
-#define PAGE 4096
-//#define PAGE (UNIX_PAGE * 4)
+#define PAGE 16384
 #define SIZE_STRUCT (sizeof(block_meta_t))
 #define u8 uint8_t 
 

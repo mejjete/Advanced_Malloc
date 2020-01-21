@@ -54,7 +54,6 @@ struct a_mallinfo_t a_mallinfo()
     return info;
 }   
 
-
 static block_meta_t *split_block(block_meta_t *ptr, size_t size)
 {
     if(ptr == NULL)
@@ -121,7 +120,13 @@ static void *morescore(size_t size)
 {
     if(size < PAGE)
         size = PAGE;
-    void *ptr =  sbrk(size);
+    void *ptr = NULL;
+    #ifdef WIN32
+        ptr = VirtualAlloc(NULL, PAGE, MEM_COMMIT, PAGE_READWRITE); 
+    #endif
+    #ifdef __linux__
+        ptr =  sbrk(size);
+    #endif
     if(ptr == MMAP_ERROR)
         return NULL;
     return ptr;
@@ -206,23 +211,3 @@ void wfree(void *ptr)
         next = next->next;
     }
 } 
-
-int main()
-{
-    char *ptr = (char *)a_malloc(10);
-    int *i_ptr = (int *)a_malloc(sizeof(int) * 4);
-    int *i2_ptr = (int *)a_malloc(sizeof(int) * 10);
-    wfree(i_ptr);
-    wfree(ptr);
-    wfree(i2_ptr);
-    LOG(true);
-    return 0;
-}
-
-
-    /*char *ptr = (char *)a_malloc(10);
-    int *i_ptr = (int *)a_malloc(sizeof(int) * 4);
-    int *i2_ptr = (int *)a_malloc(sizeof(int) * 10);
-    wfree(i_ptr);
-    wfree(ptr);
-    wfree(i2_ptr);*/

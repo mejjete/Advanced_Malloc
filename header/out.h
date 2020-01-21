@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#ifdef __linux__
+    #include <unistd.h>
+#endif
 #include <stdarg.h>
 #include <string.h>
 #include <stdbool.h>

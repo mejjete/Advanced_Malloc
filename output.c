@@ -106,29 +106,4 @@ char* itoa(int num, char* str, int base)
     reverse(str, i); 
     return str; 
 } 
-/*
-void decToHexa(char *string, char *base) 
-{    
-    int n = atoi(string);
-    char hexaDeciNum[100];  
-    int i = 0; 
-    while(n!=0) 
-    {    
-        int temp  = 0;  
-        temp = n % 16; 
-        if(temp < 10) 
-        { 
-            base[i] = temp + 48; 
-            i++; 
-        } 
-        else
-        { 
-            base[i] = temp + 55; 
-            i++; 
-        } 
-        n = n/16; 
-    } 
-    strcpy(base, hexaDeciNum);
-}
-*/
 
