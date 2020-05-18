@@ -2,6 +2,12 @@
 #include "header/a_malloc.h"
 #include "header/out.h"                                
 
+#ifdef WIN32
+#define BAD_ALLOC NULL
+#elif __linux__
+#define BAD_ALLOC MMAP_ERROR
+#endif
+
 void *base = NULL;
 unsigned unused_space = PAGE;
 
@@ -127,7 +133,7 @@ static void *morescore(size_t size)
     #ifdef __linux__
         ptr =  sbrk(size);
     #endif
-    if(ptr == MMAP_ERROR)
+    if(ptr == BAD_ALLOC)
         return NULL;
     return ptr;
 }
